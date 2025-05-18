@@ -11,9 +11,7 @@ function App() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_BASE_URL}`, {
-          withCredentials: true, // if your backend uses cookies
-        });
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_BASE_URL}`);
         console.log(response.data);
         setUser(response.data); // assuming response.data is { name: "", role: "" }
       } catch (error) {

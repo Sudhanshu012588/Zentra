@@ -1,33 +1,49 @@
-import { useState, useEffect } from 'react'
-import axios from "axios"
-import './App.css'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";  // <-- import Toaster here
+import './App.css';
+import ZenithSignup from "./Pages/Signup";
+import ZenithLogin from "./Pages/ZenithLogin";
+import { useEffect } from "react";
+import HomePage from './Pages/Homepage'
+import { useStore } from "../store/Store";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Dashboard from "./Pages/Dashboard";
 
 function App() {
-  const [user, setUser] = useState({
-    name: "",
-    role: ""
-  });
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_BASE_URL}`);
-        console.log(response.data);
-        setUser(response.data); // assuming response.data is { name: "", role: "" }
-      } catch (error) {
-        console.error("Error fetching user:", error);
-      }
-    };
-
-    fetchUser();
-  }, []); // empty dependency array so it runs once on mount
-
+  const user = useStore((state)=>state.User)
+  const setUser = useStore((state)=>state.setUser)
+  
   return (
     <>
-      <div>
-        <h1>Hello {user.name}</h1>
-        <p>Role: {user.role}</p>
-      </div>
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+          success: {
+            iconTheme: {
+              primary: 'green',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      <BrowserRouter>
+        
+        {/* <Navbar/> */}
+        <Routes>
+
+          <Route path="/" element={<HomePage/>}/>
+          <Route path="/signup" element={<ZenithSignup />} />
+          <Route path="/login" element={<ZenithLogin/>}/>
+          <Route path="/dashboard" element={<Dashboard/>}/>
+        </Routes>
+      </BrowserRouter>
     </>
   );
 }

@@ -41,6 +41,7 @@ export default function Dashboard() {
           });
           // Removed dummy URLs from initial state setting
           setProfilePhotoPreview(userData.profilephoto);
+          console.log(userData.profilephoto)
           setCoverImagePreview(userData.coverimage);
         }
       } catch (error) {
@@ -69,7 +70,12 @@ export default function Dashboard() {
     }
   };
 
+    // useEffect(() => {
+    //   console.log(user)
+    // }, [user])
+    
   useEffect(() => {
+    
     const AccessToken = localStorage.getItem("AccessToken");
     if (AccessToken) {
       fetchUser(AccessToken);

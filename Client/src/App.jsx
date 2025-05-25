@@ -9,6 +9,7 @@ import { useStore } from "../store/Store";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Dashboard from "./Pages/Dashboard";
+import NudgesPreview from "./Pages/NudgesPreview";
 
 function App() {
   const user = useStore((state)=>state.User)
@@ -41,6 +42,7 @@ function App() {
           <Route path="/" element={<HomePage/>}/>
           <Route path="/signup" element={<ZenithSignup />} />
           <Route path="/login" element={<ZenithLogin/>}/>
+          <Route path="/allnudge" element={<NudgesPreview/>}/>
           <Route path="/dashboard" element={<Dashboard/>}/>
         </Routes>
       </BrowserRouter>

@@ -1,5 +1,6 @@
 import Nudge from "../Models/NudgeModel.js";
 import {User} from "../Models/UserModel.js"
+import {automateNudge} from "../gemini/NudgeAutomation.js"
 export const createNudge= async(req,res)=>{
     const {title,body,creatorid,creatorname,profilephoto}=req.body
     if(!title || !body || !creatorid || !creatorname){
@@ -190,3 +191,32 @@ export const getallnudges = async(req,res)=>{
          })   
         }
 }
+
+
+//Automatic Nudge
+export const autoNudge = async (req, res) => {
+  const prompt = req.body.prompt;
+  if (!prompt) {
+    return res.status(400).json({
+      status: "automation_failed",
+      message: "No prompt provided",
+    });
+  }
+  // console.log(prompt)
+  try {
+    const result = await automateNudge(prompt);
+
+    return res.status(200).json({
+      status: "automation_success",
+      message: "Automation completed successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "automation_failed",
+      message: "An error occurred during automation",
+      error: error.message,
+    });
+  }
+};
+

@@ -107,7 +107,7 @@ export default function NudgesPreview() {
       `${import.meta.env.VITE_BACKEND_BASE_URL}Nudge/zenith`,
       { prompt: newinput }
     );
-    const replyText = response.data.data.text || "Zenith is thinking...";
+    const replyText = response.data.data.text || "Hey there you nudge is created...";
 
     // Append Zenith's reply
     setChatMessages((prev) => [...prev, { sender: "zenith", text: replyText }]);

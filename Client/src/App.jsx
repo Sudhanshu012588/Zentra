@@ -10,6 +10,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Dashboard from "./Pages/Dashboard";
 import NudgesPreview from "./Pages/NudgesPreview";
+import Community from "./Pages/Community";
 
 function App() {
   const user = useStore((state)=>state.User)
@@ -44,6 +45,7 @@ function App() {
           <Route path="/login" element={<ZenithLogin/>}/>
           <Route path="/allnudge" element={<NudgesPreview/>}/>
           <Route path="/dashboard" element={<Dashboard/>}/>
+          <Route path="/community" element={<Community/>}/>
         </Routes>
       </BrowserRouter>
     </>

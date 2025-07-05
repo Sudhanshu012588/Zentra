@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema(
     },
     RefreshToken:{
       type:String
+    },
+    isOnline:{
+      type:Boolean,
+      default:false
     }
   },
   {

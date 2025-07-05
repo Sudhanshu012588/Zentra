@@ -13,7 +13,7 @@ export const createNudge= async(req,res)=>{
     try{
         const user = await User.findOne({email:creatorid})
         if(user){
-            console.log(user.profilephoto)
+            // console.log(user.profilephoto)
             const nudge = await Nudge.create({
                 creatorId:creatorid,
                 title:title,
@@ -21,7 +21,7 @@ export const createNudge= async(req,res)=>{
                 author:creatorname,
                 profilephoto:user.profilephoto
             })
-            console.log(nudge)
+            // console.log(nudge)
             res.status(200).json({
                 status:"success",
                 message:"Nudge created successfully",

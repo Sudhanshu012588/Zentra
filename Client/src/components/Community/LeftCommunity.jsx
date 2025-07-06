@@ -4,6 +4,7 @@ import { useCommunityStore } from "../../../store/CommunityState";
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import socket from '../socket/socket';
+import { Send   } from 'lucide-react';
 
 function LeftCommunity() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +16,8 @@ function LeftCommunity() {
   const selectedCommunity = useCommunityStore((state)=>state.selectedCommunity)
   const [Communities, setCommunities] = useState([]);
   const [activeCommunityId, setActiveCommunityId] = useState(null);
-
+  const [Search,setSearch] = useState("")
+  const [SearchRes,setSearchRes]= useState([])
   const fetchAllCommunities = async () => {
     const AccessToken = localStorage.getItem("AccessToken");
     try {
@@ -26,6 +28,29 @@ function LeftCommunity() {
     }
   };
 
+  const SeachCommunity = async(e)=>{
+    e.preventDefault()
+    try{
+        await axios.post(`${import.meta.env.VITE_BACKEND_BASE_URL}community/search`,{name:Search})
+        .then((res)=>{
+          if(res.data.status == "failed"){
+            throw new error("No Result found")
+          }
+          else{
+
+            setSearchRes(res.data.result)
+            toast.success("Found a community")
+            if(res.data.result.length == 0 ){
+              throw new error("No Result found")
+            }
+          }
+        })
+    }catch(error){
+      setSearchRes([])
+      toast.error("No Result found")
+    }
+  }
+
   useEffect(() => {
     fetchAllCommunities();
 
@@ -33,6 +58,8 @@ function LeftCommunity() {
     setAction("CreateCommunity");
     setActiveCommunityId(null);
   }, []);
+
+  
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -71,7 +98,21 @@ function LeftCommunity() {
         `}
       >
         <h2 className="text-xl font-semibold mb-4 hidden md:block">Communities</h2>
-
+          <form  onSubmit={SeachCommunity}>
+        <div className='flex '>
+          <input
+            className='w-full bg-gray-700 rounded-l-2xl  p-2'
+            placeholder='🔍 Search'
+            value={Search}
+            onChange={(e)=>setSearch(e.target.value)}
+            />
+          <button className='p-2 w-fit bg-gray-700 rounded-r-2xl hover:border-2 cursor-pointer'
+            onClick={SeachCommunity}
+          >
+            <Send  />
+          </button>
+        </div>
+          </form>
         {/* Create Community Button */}
         <button
           className={`w-full py-2 px-4 text-left rounded transition-all
@@ -83,9 +124,46 @@ function LeftCommunity() {
         >
           + Create Community
         </button>
+          {/* Search Results */}
+
+          {SearchRes.length > 0 && (
+          <div className="space-y-3">
+            {SearchRes.map((community) => (
+              <div
+                key={community._id}
+                onClick={() => {
+                  setAction("getCommunity");
+                  setActiveCommunityId(community._id);
+                  communitySelect({
+                    id: community._id,
+                    name: community.name,
+                    avatar: community.avatar,
+                    description: community.description,
+                    members: community.members,
+                    admin: community.admin
+                  })
+                }}
+                className={`flex items-center gap-4 px-4 py-3 rounded-md cursor-pointer transition-shadow shadow-sm
+                  ${activeCommunityId === community._id ? "bg-green-600" : "bg-gray-700 hover:bg-gray-600"}`}
+              >
+                <img
+                  src={community.avatar || "/default-avatar.png"}
+                  alt={community.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                <div className="text-left">
+                  <h2 className="font-semibold">{community.name}</h2>
+                  <p className="text-sm text-gray-300">{community.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+
 
         {/* List of Communities */}
-        {Communities.length > 0 && (
+        {Communities.length > 0 && SearchRes.length==0 && (
           <div className="space-y-3">
             {Communities.map((community) => (
               <div

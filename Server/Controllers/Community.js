@@ -22,7 +22,7 @@ export const create = async(req,res)=>{
     }
     try {
         const newCommunity =await Community.create({
-        name:name,
+        name:name.toLowerCase(),
         description:description,
         admin:[decodedToken.id],
         members:[decodedToken.id],
@@ -46,7 +46,6 @@ export const create = async(req,res)=>{
 
     
 }
-
 
 export const fetchCommunities = async(req,res)=>{
     const {AccessToken} = req.body;
@@ -85,7 +84,6 @@ export const fetchCommunities = async(req,res)=>{
     }
 }
 
-
 export const getAllMembers = async (req, res) => {
   const memberIds = req.body.member;
     // console.log(memberIds)
@@ -118,8 +116,6 @@ export const getAllMembers = async (req, res) => {
     });
   }
 };
-
-
 
 export const joinCommunity = async(req,res)=>{
     const {communityID,AccessToken} = req.body;
@@ -155,6 +151,89 @@ export const joinCommunity = async(req,res)=>{
         return res.status(500).json({
             status:"failed",
             message:error
+        })
+    }
+}
+
+export const searchcommunity = async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({
+      status: "failed",
+      message: "Can't find a Community",
+    });
+  }
+
+  try {
+    const SearchResult = await Community.find({
+  name: { $regex: name, $options: "i" }
+});
+
+    if (SearchResult.length > 0) {
+      return res.status(200).json({
+        status: "Success",
+        message: "Found a community",
+        name: name.toLowerCase(),
+        result: SearchResult,
+      });
+    } else {
+      throw new Error("Can't find a community");
+    }
+  } catch (error) {
+    return res.status(500).json({
+      status: "failed",
+      message: "Can't find a community",
+      error: error.message,
+    });
+  }
+};
+
+export const RemoveMember = async(req,res)=>{
+    const {memberId,AccessToken,CommunityId}=req.query;
+
+    if(!memberId || !AccessToken || !CommunityId){
+        return res.status(400).json({
+            status:"failed",
+            message:"Missing Fields"
+        })
+    }
+
+    try {
+        const decodedToken = await compare(AccessToken,process.env.JWT_SECRET)
+        if(!decodedToken){
+            throw new error("unauthorized Access: Invalid Token")
+        }
+        let isAdmin = false
+        const community = await Community.findById(CommunityId)
+        community.admin.map((admin)=>{
+            if(admin==decodedToken.id){
+                isAdmin=true
+            }
+        })
+
+        if(!isAdmin){
+            throw new error("unauthorized Access:Not a Admin")
+        }
+
+        community.members.map((member,index)=>{
+            if(member==memberId){
+                community.members.splice(index,1);
+            }
+        })
+        community.save();
+
+        return res.status(200).json({
+            status:"Success",
+            message:"member removed successfully",
+            community
+        })
+
+
+    } catch (error) {
+        return res.status(500).json({
+            statuss:"failed",
+            message:"Can't remove the member"
         })
     }
 }

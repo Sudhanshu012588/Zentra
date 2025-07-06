@@ -4,26 +4,87 @@ import { useStore } from '../../../store/Store';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import socket from '../socket/socket';
+import { ChevronDown } from 'lucide-react';
+import { ChevronUp } from 'lucide-react';
+
 
 function CommunityInterface() {
-  const selectedCommunity = useCommunityStore((state) => state.selectedCommunity);
-  const User = useStore((state) => state.User);
-
+  const { selectedCommunity } = useCommunityStore();
+  const { User } = useStore();
+  const setUser = useStore((state)=>state.setUser)
   const [members, setMembers] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMember, setIsMember] = useState(false);
-
+  const [isAdmin, setIsAdmin] = useState(false);
   const messageEndRef = useRef(null);
   const sidebarRef = useRef(null);
+  const [Toggle,setToggle]= useState(false)
+
+  const fetchUser = async (AccessToken) => {
+    if (!User.isLoggedIn) {
+      try {
+        const verifyResponse = await axios.post(
+          `${import.meta.env.VITE_BACKEND_BASE_URL}user/verify`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${AccessToken}` },
+          }
+        );
+
+        if (verifyResponse.data.status === "Verified") {
+          const userData = verifyResponse.data.user;
+          setUser({
+            id: userData._id,
+            name: userData.name,
+            email: userData.email,
+            isLoggedIn: true,
+            profilePhoto: userData.profilephoto,
+            coverImage: userData.coverimage
+          });
+        }
+      } catch (error) {
+        toast.error("Error verifying user:", error);
+        navigate("/login");
+      }
+    } else {
+      const verifyResponse = await axios.post(
+        `${import.meta.env.VITE_BACKEND_BASE_URL}user/verify`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${AccessToken}` },
+        }
+      );
+
+      if (verifyResponse.data.status === "Verified") {
+        const userData = verifyResponse.data.user;
+        setUser({
+          id: userData._id,
+          name: userData.name,
+          email: userData.email,
+          isLoggedIn: true,
+          profilePhoto: userData.profilephoto,
+          coverImage: userData.coverimage
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const AccessToken = localStorage.getItem("AccessToken");
+    if (AccessToken) {
+      fetchUser(AccessToken);
+    } else {
+      navigate("/login");
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Fetch community members and admins
   const fetchMembers = async () => {
     try {
       const [memberRes, adminRes] = await Promise.all([
@@ -41,17 +102,15 @@ function CommunityInterface() {
     }
   };
 
-  // Join community
   const handleJoin = async () => {
     try {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_BASE_URL}community/join`, {
         communityID: selectedCommunity.id,
         AccessToken: localStorage.getItem('AccessToken'),
       });
-
       if (res.data.status === 'Success') {
         toast.success('Joined the community!');
-        window.location.reload();
+        setIsMember(true)
       } else {
         toast.error(res.data.message || 'Join failed');
       }
@@ -60,7 +119,6 @@ function CommunityInterface() {
     }
   };
 
-  // Send a message or trigger Zenith
   const handleSend = () => {
     if (!message.trim()) return;
 
@@ -75,19 +133,36 @@ function CommunityInterface() {
       communityDescription: selectedCommunity.description,
     };
 
-    if (msgObj.text.toLowerCase().includes('@zenith')) {
-      socket.emit('zenith', msgObj);
-    } else {
-      socket.emit('send-message', msgObj);
-    }
+    const event = msgObj.text.toLowerCase().includes('@zenith') ? 'zenith' : 'send-message';
+    socket.emit(event, msgObj);
 
     setMessage('');
     scrollToBottom();
   };
 
+  const removeMember = async (memberId) => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_BASE_URL}community/remove`, {
+        params: {
+          memberId,
+          AccessToken: localStorage.getItem("AccessToken"),
+          CommunityId: selectedCommunity.id,
+        },
+      });
+
+      if (res.data.status === 'Success') {
+        setMembers((prev) => prev.filter((member) => member._id !== memberId));
+        toast.success(res.data.message);
+      } else {
+        throw new Error(res.data.message);
+      }
+    } catch (error) {
+      toast.error(error.message || "Something went wrong");
+    }
+  };
+
   useEffect(() => {
     if (!selectedCommunity.id) return;
-
     fetchMembers();
     socket.emit('GotConnected', selectedCommunity);
 
@@ -109,19 +184,15 @@ function CommunityInterface() {
     };
   }, [selectedCommunity.id]);
 
-  // Scroll to bottom on new messages
+  useEffect(() => {
+    setIsAdmin(admins.some((admin) => admin._id === User.id));
+    setIsMember(admins.some((a) => a._id === User.id) || members.some((m) => m._id === User.id));
+  }, [admins, members, User.id]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Check if user is a member or admin
-  useEffect(() => {
-    const isAdmin = admins.some((a) => a._id === User.id);
-    const isMem = members.some((m) => m._id === User.id);
-    setIsMember(isAdmin || isMem);
-  }, [admins, members, User.id]);
-
-  // Close sidebar on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (sidebarRef.current && !sidebarRef.current.contains(e.target)) {
@@ -138,9 +209,7 @@ function CommunityInterface() {
 
   return (
     <div className="flex min-h-screen bg-black text-white relative">
-      {/* Main Section */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="h-[9vh] bg-blue-800 flex items-center gap-4 px-4 py-3 rounded-b-2xl">
           <button className="md:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
@@ -170,7 +239,6 @@ function CommunityInterface() {
           )}
         </header>
 
-        {/* Chat Messages */}
         <div className="flex-1 overflow-hidden">
           <div className="overflow-y-auto mt-16 px-4 py-3 pb-32 h-full space-y-4">
             {messages.map((msg, idx) => (
@@ -190,15 +258,14 @@ function CommunityInterface() {
             <div ref={messageEndRef} />
           </div>
 
-          {/* Input Bar */}
           {isMember && (
-            <div className="fixed  bottom-0 px-4 py-3 bg-black border-t border-gray-700 flex gap-3 w-fit z-50">
+            <div className="fixed bottom-0 px-4 py-3 bg-black border-t border-gray-700 flex gap-3 w-fit z-50">
               <input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Type your message..."
-                className="flex-1 w-[65vw] bg-slate-700 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-[60vw] bg-slate-700 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={handleSend}
@@ -212,7 +279,6 @@ function CommunityInterface() {
         </div>
       </div>
 
-      {/* Sidebar */}
       <aside
         ref={sidebarRef}
         className={`fixed md:static top-0 right-0 z-50 bg-blue-900 w-64 h-full px-4 py-5 shadow-lg transition-transform duration-300 ${
@@ -220,7 +286,7 @@ function CommunityInterface() {
         }`}
       >
         <h3 className="text-lg font-semibold text-center border-b pb-2 mb-4">Members</h3>
-        <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-6rem)]">
+        <div className=" flex-col gap-3 min-h-screen overflow-y-auto pr-2">
           {admins.map((admin, i) => (
             <div key={`admin-${i}`} className="flex gap-3 items-center bg-blue-800 p-2 rounded-lg">
               <img src={admin.profilephoto || '/default-avatar.png'} className="w-10 h-10 rounded-full border" />
@@ -233,10 +299,39 @@ function CommunityInterface() {
           ))}
           {filteredMembers.map((member, i) => (
             <div key={`member-${i}`} className="flex gap-3 items-center bg-blue-800 p-2 rounded-lg">
-              <img src={member.profilephoto || '/default-avatar.png'} className="w-10 h-10 rounded-full border" />
               <div>
+                <img src={member.profilephoto || '/default-avatar.png'} className="w-10 h-10 rounded-full border" />
                 <p className="text-sm font-semibold">{member.name}</p>
                 <p className="text-xs text-blue-200">{member.email}</p>
+                {isAdmin && (
+                  <div className='mt-2 flex'>
+                    {
+                      Toggle?(
+                        <div>
+                          <button className='cursor-pointer' onClick={(e)=>setToggle(!Toggle)}>
+                      <ChevronUp/>
+                    </button>
+                    <br/>
+                        <button className='bg-red-800 hover:bg-red-500 p-2  rounded-2xl' onClick={() => removeMember(member._id)}>
+                      Remove
+                    </button>
+                    <button className='bg-yellow-800 hover:bg-yellow-500 p-2 ml-2 rounded-2xl'>
+                      MakeAdmin
+                    </button>
+                    
+                    
+                    </div>
+                      ):(
+                        <div>
+                          <button className='cursor-pointer' onClick={(e)=>setToggle(!Toggle)}>
+                            <ChevronDown/>
+                          </button>
+                        </div>
+                      )
+                    }
+                    
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -246,12 +341,8 @@ function CommunityInterface() {
         </div>
       </aside>
 
-      {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
     </div>
   );

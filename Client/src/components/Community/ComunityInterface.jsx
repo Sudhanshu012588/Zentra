@@ -161,6 +161,27 @@ function CommunityInterface() {
     }
   };
 
+
+  const makeAdmin = async(memberId) => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_BASE_URL}community/makeAdmin`, {
+        params: {
+          memberId,
+          AccessToken: localStorage.getItem("AccessToken"),
+          CommunityId: selectedCommunity.id,
+        }})
+        if(res.data.status === 'Success') {
+          setAdmins((prev) => [...prev, members.find((m) => m._id === memberId)]);
+          setMembers((prev) => prev.filter((m) => m._id !== memberId));
+          toast.success(res.data.message);
+        }else{
+          throw new Error(res.data.message);
+        }
+    } catch (error) {
+      toast.error(error.message || "Something went wrong");
+    }
+  }
+
   useEffect(() => {
     if (!selectedCommunity.id) return;
     fetchMembers();
@@ -259,13 +280,13 @@ function CommunityInterface() {
           </div>
 
           {isMember && (
-            <div className="fixed bottom-0 px-4 py-3 bg-black border-t border-gray-700 flex gap-3 w-fit z-50">
+            <div className="fixed bottom-0 px-4 py-3 bg-black border-t border-gray-700 flex gap-3 w-fit z-51">
               <input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Type your message..."
-                className="w-[60vw] bg-slate-700 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-[59vw] bg-slate-700 text-white px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={handleSend}
@@ -288,7 +309,7 @@ function CommunityInterface() {
         <h3 className="text-lg font-semibold text-center border-b pb-2 mb-4">Members</h3>
         <div className=" flex-col gap-3 min-h-screen overflow-y-auto pr-2">
           {admins.map((admin, i) => (
-            <div key={`admin-${i}`} className="flex gap-3 items-center bg-blue-800 p-2 rounded-lg">
+            <div key={`admin-${i}`} className="flex gap-3 items-center mt-2 bg-blue-800 p-2 rounded-lg">
               <img src={admin.profilephoto || '/default-avatar.png'} className="w-10 h-10 rounded-full border" />
               <div>
                 <p className="text-sm font-semibold">{admin.name}</p>
@@ -298,7 +319,7 @@ function CommunityInterface() {
             </div>
           ))}
           {filteredMembers.map((member, i) => (
-            <div key={`member-${i}`} className="flex gap-3 items-center bg-blue-800 p-2 rounded-lg">
+            <div key={`member-${i}`} className="flex gap-3 mt-2 items-center bg-blue-800 p-2 rounded-lg">
               <div>
                 <img src={member.profilephoto || '/default-avatar.png'} className="w-10 h-10 rounded-full border" />
                 <p className="text-sm font-semibold">{member.name}</p>
@@ -315,7 +336,10 @@ function CommunityInterface() {
                         <button className='bg-red-800 hover:bg-red-500 p-2  rounded-2xl' onClick={() => removeMember(member._id)}>
                       Remove
                     </button>
-                    <button className='bg-yellow-800 hover:bg-yellow-500 p-2 ml-2 rounded-2xl'>
+                    <button 
+                      className='bg-yellow-800 hover:bg-yellow-500 p-2 ml-2 rounded-2xl'
+                      onClick={()=>makeAdmin(member._id)}
+                      >
                       MakeAdmin
                     </button>
                     

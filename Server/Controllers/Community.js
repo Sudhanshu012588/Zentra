@@ -237,3 +237,48 @@ export const RemoveMember = async(req,res)=>{
         })
     }
 }
+
+export const makeAdmin = async(req,res)=>{
+  const {memberId,AccessToken,CommunityId} = req.query;
+  if (!memberId || !AccessToken || !CommunityId) {
+    return res.status(400).json({
+      status: "failed",
+      message: "Missing Fields",
+    });
+  }
+  try{
+    const decodedToken = await compare(AccessToken, process.env.JWT_SECRET);
+    if (!decodedToken) {
+      throw new Error("Unauthorized Access: Invalid Token");
+    }
+    let isAdmin = false;
+    const community = await Community.findById(CommunityId);
+    community.admin.map((admin) => {
+      if (admin == decodedToken.id) {
+        isAdmin = true;
+      }
+    });
+
+    if (!isAdmin) {
+      throw new Error("Unauthorized Access: Not an Admin");
+    }
+
+    if (!community.members.includes(memberId)) {
+      throw new Error("Member not found in the community");
+    }
+
+    community.admin.push(memberId);
+    await community.save();
+
+    return res.status(200).json({
+      status: "Success",
+      message: "Member made admin successfully",
+      community,
+    });
+  }catch (error) {
+    return res.status(500).json({
+      status: "failed",
+      message: error.message || "Can't make member an admin",
+    });
+  }
+}
